@@ -1,52 +1,63 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace Homework2;
 
 class Program
 {
-    static void Main(string[] args)
+    static void Main()
     {
-        DatabaseManager db = new DatabaseManager();
-        db.InitializeDatabase();
+        var db = new DatabaseManager("cinema.db");
 
-        // Создаем тестовые файлы CSV для первой проверки
-        File.WriteAllLines("studios.csv", new[] { "1;Warner Bros.", "2;Universal" });
-        File.WriteAllLines("movies.csv", new[] { "1;1;Inception;160", "2;2;Jurassic Park;63" });
+        // Подготовка файлов
+        File.WriteAllLines("studios.csv", new[] { "id;name", "1;Warner Bros.", "2;Universal Pictures", "3;Paramount Pictures", "4;Walt Disney" });
+        File.WriteAllLines("movies.csv", new[] {
+            "id;sid;title;budget",
+            "1;1;Начало;160", "2;1;Дюна;165", "3;1;Довод;205",
+            "4;2;Парк Юрского периода;63", "5;2;Челюсти;9", "6;2;Инопланетянин;10",
+            "7;3;Титаник;200", "8;3;Гладиатор;103",
+            "9;4;Король Лев;45", "10;4;Холодное сердце;150"
+        });
 
         while (true)
         {
-            Console.WriteLine("\n--- МЕНЮ (Вариант 2, Группа 3) ---");
-            Console.WriteLine("1. Импорт из CSV");
-            Console.WriteLine("2. Показать фильмы");
-            Console.WriteLine("3. Отчет со статистикой (Группа 3)");
+            Console.WriteLine("\n--- УПРАВЛЕНИЕ КИНОТЕАТРОМ ---");
+            Console.WriteLine("1. Импорт из CSV (ОЧИЩАЕТ БАЗУ!)");
+            Console.WriteLine("2. Список всех фильмов");
+            Console.WriteLine("3. Добавить новый фильм");
+            Console.WriteLine("4. Удалить фильм по ID");
             Console.WriteLine("0. Выход");
             Console.Write("Выбор: ");
 
-            string choice = Console.ReadLine();
-            if (choice == "0") break;
+            var choice = Console.ReadLine(); // Устранено предупреждение CS8600
+            if (string.IsNullOrEmpty(choice) || choice == "0") break;
 
-            switch (choice)
+            try
             {
-                case "1":
-                    db.ImportFromCsv("studios.csv", "movies.csv");
-                    Console.WriteLine("Данные загружены!");
-                    break;
-                case "2":
-                    var movies = db.GetAllMovies();
-                    foreach (var m in movies) Console.WriteLine(m);
-                    break;
-                case "3":
-                    var data = db.GetAllMovies();
-                    string report = new ReportBuilder(data)
-                        .AddHeader("Киностудии и фильмы")
-                        .AddContent()
-                        .AddStatistics()
-                        .Build();
-                    Console.WriteLine(report);
-                    break;
+                switch (choice)
+                {
+                    case "1":
+                        db.ImportFromCsv("studios.csv", "movies.csv");
+                        Console.WriteLine("База обновлена данными из CSV.");
+                        break;
+                    case "2":
+                        db.GetAllMovies().ForEach(Console.WriteLine);
+                        break;
+                    case "3":
+                        Console.Write("Название: "); string t = Console.ReadLine() ?? "";
+                        Console.Write("ID студии (1-4): "); int sid = int.Parse(Console.ReadLine() ?? "1");
+                        Console.Write("Бюджет (млн$): "); int b = int.Parse(Console.ReadLine() ?? "0");
+                        db.AddMovie(new Movie(0, sid, t, b, ""));
+                        Console.WriteLine("Фильм добавлен в базу данных!");
+                        break;
+                    case "4":
+                        Console.Write("Введите ID для удаления: ");
+                        db.DeleteMovie(int.Parse(Console.ReadLine() ?? "0"));
+                        Console.WriteLine("Запись удалена.");
+                        break;
+                }
             }
+            catch (Exception ex) { Console.WriteLine($"Ошибка: {ex.Message}"); }
         }
     }
 }
