@@ -31,15 +31,33 @@ class Program
                             .Print();
                         break;
                     case "2":
-                        // Сначала показываем справочник
+                        // 1. Сначала показываем справочник студий (требование задания)
                         Console.WriteLine("\nСПРАВОЧНИК СТУДИЙ:");
                         db.GetTable("SELECT * FROM studio").ForEach(s => Console.WriteLine($"[{s[0]}] {s[1]}"));
 
-                        Console.Write("Название: "); string t = Console.ReadLine();
-                        Console.Write("ID студии: ");
-                        if (!int.TryParse(Console.ReadLine(), out int sid)) throw new Exception("Нужно целое число!");
+                        // 2. Запрашиваем название
+                        Console.Write("Название фильма: ");
+                        string t = Console.ReadLine();
 
-                        db.AddMovie(t, sid, 0);
+                        // 3. Запрашиваем ID студии с проверкой (TryParse)
+                        Console.Write("ID студии: ");
+                        if (!int.TryParse(Console.ReadLine(), out int sid))
+                        {
+                            Console.WriteLine("Ошибка: ID студии должен быть числом!");
+                            break;
+                        }
+
+                        // 4. ДОБАВЛЕНО: Запрос бюджета с проверкой (TryParse)
+                        Console.Write("Бюджет (млн$): ");
+                        if (!int.TryParse(Console.ReadLine(), out int b))
+                        {
+                            Console.WriteLine("Ошибка: Бюджет должен быть целым числом!");
+                            break;
+                        }
+
+                        // 5. Сохранение в базу
+                        db.AddMovie(t, sid, b);
+                        Console.WriteLine(">> Фильм успешно добавлен.");
                         break;
                     case "3": // РЕДАКТИРОВАНИЕ
                         Console.Write("ID для правки: ");
