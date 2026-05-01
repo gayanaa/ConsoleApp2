@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using Microsoft.Data.Sqlite;
 
 namespace Homework2;
 
-/// <summary> Класс для управления базой данных SQLite. </summary>
 public class DatabaseManager
 {
     private readonly string _connectionString;
@@ -17,7 +14,6 @@ public class DatabaseManager
         InitializeDatabase();
     }
 
-    /// <summary> Инициализация БД. Метод public для исправления ошибки CS0122. </summary>
     public void InitializeDatabase()
     {
         using var conn = new SqliteConnection(_connectionString);
@@ -31,77 +27,52 @@ public class DatabaseManager
         cmd.ExecuteNonQuery();
     }
 
-    /// <summary> Импорт данных с очисткой. </summary>
-    public void ImportFromCsv(string sPath, string mPath)
+    // Универсальный метод для получения данных (используется в ReportBuilder)
+    public List<string[]> GetTable(string sql)
     {
+        var results = new List<string[]>();
         using var conn = new SqliteConnection(_connectionString);
         conn.Open();
-        var clear = conn.CreateCommand();
-        clear.CommandText = "DELETE FROM movie; DELETE FROM studio;";
-        clear.ExecuteNonQuery();
-
-        if (File.Exists(sPath))
-            foreach (var line in File.ReadAllLines(sPath).Skip(1))
-            {
-                var p = line.Split(';');
-                var cmd = conn.CreateCommand();
-                cmd.CommandText = "INSERT INTO studio VALUES (@id, @n)";
-                cmd.Parameters.AddWithValue("@id", p[0]);
-                cmd.Parameters.AddWithValue("@n", p[1]);
-                cmd.ExecuteNonQuery();
-            }
-
-        if (File.Exists(mPath))
-            foreach (var line in File.ReadAllLines(mPath).Skip(1))
-            {
-                var p = line.Split(';');
-                var cmd = conn.CreateCommand();
-                cmd.CommandText = "INSERT INTO movie (studio_id, title, budget_mln) VALUES (@s, @t, @b)";
-                cmd.Parameters.AddWithValue("@s", p[1]);
-                cmd.Parameters.AddWithValue("@t", p[2]);
-                cmd.Parameters.AddWithValue("@b", p[3]);
-                cmd.ExecuteNonQuery();
-            }
+        using var cmd = new SqliteCommand(sql, conn);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            string[] row = new string[reader.FieldCount];
+            for (int i = 0; i < reader.FieldCount; i++) row[i] = reader[i].ToString();
+            results.Add(row);
+        }
+        return results;
     }
 
-    /// <summary> Метод вставки для исправления ошибки CS1061. </summary>
-    public void AddMovie(Movie m)
+    public void AddMovie(string title, int studioId, int budget)
     {
         using var conn = new SqliteConnection(_connectionString);
         conn.Open();
-        var cmd = conn.CreateCommand();
-        cmd.CommandText = "INSERT INTO movie (studio_id, title, budget_mln) VALUES (@s, @t, @b)";
-        cmd.Parameters.AddWithValue("@s", m.StudioId);
-        cmd.Parameters.AddWithValue("@t", m.Title);
-        cmd.Parameters.AddWithValue("@b", m.BudgetMln);
+        var cmd = new SqliteCommand("INSERT INTO movie (title, studio_id, budget_mln) VALUES (@t, @s, @b)", conn);
+        cmd.Parameters.AddWithValue("@t", title);
+        cmd.Parameters.AddWithValue("@s", studioId);
+        cmd.Parameters.AddWithValue("@b", budget);
         cmd.ExecuteNonQuery();
     }
 
-    /// <summary> Метод удаления для исправления ошибки CS1061. </summary>
-    public void DeleteMovie(int id)
+    public void UpdateMovie(int id, string title, int studioId, int budget)
     {
         using var conn = new SqliteConnection(_connectionString);
         conn.Open();
-        var cmd = conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM movie WHERE movie_id = @id";
+        var cmd = new SqliteCommand("UPDATE movie SET title=@t, studio_id=@s, budget_mln=@b WHERE movie_id=@id", conn);
+        cmd.Parameters.AddWithValue("@t", title);
+        cmd.Parameters.AddWithValue("@s", studioId);
+        cmd.Parameters.AddWithValue("@b", budget);
         cmd.Parameters.AddWithValue("@id", id);
         cmd.ExecuteNonQuery();
     }
 
-    public List<Movie> GetAllMovies() =>
-        ExecuteQuery("SELECT m.movie_id, m.studio_id, m.title, m.budget_mln, s.name FROM movie m JOIN studio s ON m.studio_id = s.studio_id");
-
-    public List<Movie> ExecuteQuery(string sql)
+    public void DeleteMovie(int id)
     {
-        var list = new List<Movie>();
         using var conn = new SqliteConnection(_connectionString);
         conn.Open();
-        var cmd = conn.CreateCommand();
-        cmd.CommandText = sql;
-        using var r = cmd.ExecuteReader();
-        while (r.Read())
-            // Исправлена ошибка CS1729: передаем ровно 5 аргументов
-            list.Add(new Movie(r.GetInt32(0), r.GetInt32(1), r.GetString(2), r.GetInt32(3), r.FieldCount > 4 ? r.GetString(4) : ""));
-        return list;
+        var cmd = new SqliteCommand("DELETE FROM movie WHERE movie_id = @id", conn);
+        cmd.Parameters.AddWithValue("@id", id);
+        cmd.ExecuteNonQuery();
     }
 }

@@ -42,3 +42,5 @@ public class Studio
     /// <summary> Переопределение для удобного вывода. </summary>
     public override string ToString() => $"[{Id}] Студия: {Name}";
 }
+
+
