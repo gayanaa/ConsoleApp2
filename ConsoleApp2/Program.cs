@@ -59,20 +59,43 @@ class Program
                         db.AddMovie(t, sid, b);
                         Console.WriteLine(">> Фильм успешно добавлен.");
                         break;
-                    case "3": // РЕДАКТИРОВАНИЕ
-                        Console.Write("ID для правки: ");
+                    case "3":
+                        // 1. Показываем текущий список, чтобы пользователь видел ID
+                        new ReportBuilder(db).SetTitle("РЕДАКТИРОВАНИЕ (ВЫБЕРИТЕ ID)")
+                            .SetQuery("SELECT m.movie_id, m.title, s.name, m.budget_mln FROM movie m JOIN studio s ON m.studio_id = s.studio_id")
+                            .Print();
+
+                        Console.Write("\nВведите ID фильма для изменения: ");
                         if (!int.TryParse(Console.ReadLine(), out int eid)) break;
 
+                        // 2. Извлекаем текущие данные из БД
                         var curr = db.GetTable($"SELECT title, studio_id, budget_mln FROM movie WHERE movie_id={eid}");
-                        if (curr.Count == 0) break;
+                        if (curr.Count == 0) { Console.WriteLine("Фильм не найден."); break; }
 
-                        // Показываем текущее значение, Enter — оставляем как было
-                        Console.Write($"Новое название [{curr[0][0]}]: ");
+                        string oldTitle = curr[0][0];
+                        string oldStudioId = curr[0][1];
+                        string oldBudget = curr[0][2];
+
+                        // 3. Редактируем Название
+                        Console.Write($"Новое название [{oldTitle}]: ");
                         string nt = Console.ReadLine();
-                        nt = string.IsNullOrEmpty(nt) ? curr[0][0] : nt;
+                        if (string.IsNullOrEmpty(nt)) nt = oldTitle;
 
-                        db.UpdateMovie(eid, nt, int.Parse(curr[0][1]), int.Parse(curr[0][2]));
-                        Console.WriteLine("Данные обновлены.");
+                        // 4. Редактируем ID студии
+                        Console.WriteLine("Справочник студий:");
+                        db.GetTable("SELECT * FROM studio").ForEach(s => Console.WriteLine($"[{s[0]}] {s[1]}"));
+                        Console.Write($"Новый ID студии [{oldStudioId}]: ");
+                        string nsInput = Console.ReadLine();
+                        int ns = string.IsNullOrEmpty(nsInput) ? int.Parse(oldStudioId) : (int.TryParse(nsInput, out int resS) ? resS : int.Parse(oldStudioId));
+
+                        // 5. Редактируем Бюджет
+                        Console.Write($"Новый бюджет [{oldBudget}]: ");
+                        string nbInput = Console.ReadLine();
+                        int nb = string.IsNullOrEmpty(nbInput) ? int.Parse(oldBudget) : (int.TryParse(nbInput, out int resB) ? resB : int.Parse(oldBudget));
+
+                        // 6. Сохраняем изменения в БД
+                        db.UpdateMovie(eid, nt, ns, nb);
+                        Console.WriteLine(">> Изменения сохранены.");
                         break;
                     case "4":
                         Console.Write("ID для удаления: ");
